@@ -1,6 +1,22 @@
 /**
+ * Ajax Alexa Thumbnails
  * 
+ * @author		Eric Ferraiuolo <eferraiuolo@gmail.com>
+ * @copyright	2008 Eric Ferraiuolo
+ * @license		GNU LGPL <http://www.gnu.org/licenses/lgpl.html>
  */
+
+
+// Create EDF namespace if it doesn't exist
+if (typeof EDF == "undefined")
+	EDF = {};
+	
+	
+/**
+ * Thumbnail: Object containing the Thumbnail Server and Thumbnail Viewer.
+ */
+EDF.Thumbnail = {};
+
 
 (function() {
 	// YUI shorthands
@@ -11,32 +27,34 @@
 	var Overlay	= YAHOO.widget.Overlay;
 	
 	
-	// Create EDF namespace if it doesn't exist
-	if (typeof EDF == "undefined")
-		EDF = {};
-
-		
-	/**
-	 * Thumbnail: Object containing the Thumbnail Server and Thumbnail Viewer.
-	 */
-	EDF.Thumbnail = {};
-	
-	
 	/**
 	 * Thumbnail Service: Object to handle async retrevial and caching of website thumbnails.
 	 */
 	EDF.Thumbnail.Service = function() {
-		// Private members
+		
+		/**
+		 * URL of server-side Thumbnail Get script.
+		 * 
+		 * @property	{String}	_sourceURL
+		 * @private
+		 */
 		var _sourceURL;
+		
+		/**
+		 * A cache of server-side requests and responses.
+		 * 
+		 * @property	{Array}		_cache
+		 * @private
+		 */
 		var _cache = [];
 		
 		
-		// Private methods
 		/**
-		 * URL Root (Private) - Returns the hostname for a URL.
+		 * URL Root - Returns the hostname for a URL.
 		 *
-		 * @param {String} url
-		 * @return {String} hostname
+		 * @param		{String}	url
+		 * @return		{String}	hostname
+		 * @private
 		 */
 		var urlRoot = function(url) {
 			// Make sure a URL exists and is a String
@@ -59,10 +77,11 @@
 		};
 		
 		/**
-		 * Get Cached (Private) - Checks the cache and returns the response if thumbnail for the URL is cached.
+		 * Get Cached - Checks the cache and returns the response if thumbnail for the URL is cached.
 		 *
-		 * @param {String} url
-		 * @return {String} cachedResponse
+		 * @param		{String}	url
+		 * @return		{String}	cachedResponse
+		 * @private
 		 */
 		var getCached = function(url) {
 			// Make sure a URL exists and is a String
@@ -79,11 +98,12 @@
 		};
 		
 		/**
-		 * Set Cached (Private) - Saves a request-response pair to cache.
+		 * Set Cached - Saves a request-response pair to cache.
 		 *
-		 * @param {String} url
-		 * @param {String} response
-		 * @return {String} response
+		 * @param		{String}	url
+		 * @param		{String}	response
+		 * @return		{String}	response
+		 * @private
 		 */
 		var setCached = function(url, response) {
 			// Make sure a URL exists and is a String
@@ -111,13 +131,13 @@
 		};
 		
 		
-		// Public methods
 		return {
 			/**
 			 * Initialize - Setup the Thumbnail object with a sourceURL.
 			 *
-			 * @param {String} sourceURL
-			 * @return {Boolean} isInitialized
+			 * @param		{String}	sourceURL
+			 * @return		{Boolean}	isInitialized
+			 * @public
 			 */
 			init: function(sourceURL) {
 				// Make sure a sourceURL exists and is a String
@@ -131,8 +151,10 @@
 			/**
 			 * Get Thumbnail - Retreives a thumbnail for a URL and caches the result.
 			 *
-			 * @param {String} url
-			 * @param {Function} callback
+			 * @param		{String}	url
+			 * @param		{Function}	callback
+			 * @return		void
+			 * @public
 			 */
 			getThumbnail: function(url, callback) {
 				// Make sure a sourceURL exists and is a String
@@ -170,7 +192,9 @@
 	/**
 	 * Thumbnail Viewer: Class constructor to create presentation wrapper around Thumbnail object's functionality.
 	 * 
-	 * @param {string} id
+	 * @param		{string}	id
+	 * @return		void
+	 * @public
 	 */
 	EDF.Thumbnail.Viewer = function(id) {
 		// Make sure an ID exists and is a String
@@ -198,9 +222,11 @@
 	/**
 	 * Thumbnail Viewer - Show: Make the instance Overlay visible and retreive a URL's thumbnail.
 	 * 
-	 * @param {String} url
-	 * @param {HTMLElement} context (optional)
-	 * @param {Number} delay (optional)
+	 * @param		{String}		url
+	 * @param		{HTMLElement}	context (optional)
+	 * @param		{Number}		delay (optional)
+	 * @return		void
+	 * @public
 	 */
 	EDF.Thumbnail.Viewer.prototype.show = function(url, context, delay) {
 		// Make sure a URL exists and is a String
@@ -236,6 +262,9 @@
 	
 	/**
 	 * Thumbnail Viewer - Hide: Make the instance Overlay hidden.
+	 * 
+	 * @return		void
+	 * @public
 	 */
 	EDF.Thumbnail.Viewer.prototype.hide = function() {
 		clearTimeout(this._timer);
