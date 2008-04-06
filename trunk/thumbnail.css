@@ -1,0 +1,13 @@
+#thumbnailViewer {
+	background: url(bg-thumbnail.png) no-repeat left top;
+	padding: 15px;
+	overflow: hidden;
+}
+#thumbnailViewer img {
+	margin: 0;
+}
+#thumbnailViewer .loading {
+	background: url(loading.gif) no-repeat center;
+	width: 201px;
+	height: 147px;
+}
