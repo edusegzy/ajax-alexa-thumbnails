@@ -1,5 +1,5 @@
 #thumbnailViewer {
-	background: url(bg-thumbnail.png) no-repeat left top;
+	background: url(img/bg-container.png) no-repeat left top;
 	padding: 15px;
 	overflow: hidden;
 }
@@ -7,7 +7,7 @@
 	margin: 0;
 }
 #thumbnailViewer .loading {
-	background: url(loading.gif) no-repeat center;
+	background: url(img/loading.gif) no-repeat center;
 	width: 201px;
 	height: 147px;
 }
