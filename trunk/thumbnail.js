@@ -7,30 +7,134 @@
  */
 
 
-// Create EDF namespace if it doesn't exist
-if (typeof EDF == "undefined")
-	EDF = {};
+(function(){
+	// Throw error if YAHOO Global Object isn't defined.
+	if (typeof YAHOO == "undefined")
+		throw "YAHOO Golbal Object is required.";
 	
 	
-/**
- * Thumbnail: Object containing the Thumbnail Server and Thumbnail Viewer.
- */
-EDF.Thumbnail = {};
-
-
-(function() {
-	// YUI shorthands
-	var Lang	= YAHOO.lang;
-	var Dom		= YAHOO.util.Dom;
-	var Event	= YAHOO.util.Event;
-	var Connect	= YAHOO.util.Connect;
-	var Overlay	= YAHOO.widget.Overlay;
+	// Create EDF namespace if it doesn't exist
+	if (typeof EDF == "undefined")
+		EDF = {};
+	
+	
+	/**
+	 * Thumbnail: Object containing the Thumbnail Server and Thumbnail Widgets.
+	 */
+	EDF.Thumbnail = {};
+	
+	
+	/**
+	 * Thumbnail Dependencies: Object to handle YUI dependency management.
+	 * 
+	 * @class		Dependencies
+	 * @singleton
+	 */
+	EDF.Thumbnail.Dependencies = function() {
+		// Object to hold each modules YUI dependencies.
+		var _modules = {
+			Service:	["dom", "event", "connection"],
+			Tooltip:	["container"]
+		};
+		
+		// YUI Loader object.
+		var _loader = null;
+		
+		
+		return {
+			
+			/**
+			 * Determines whether the YUI dependencies have been loaded.
+			 * 
+			 * @param		{String}	module
+			 * @return		{Boolean}	loaded
+			 * @public
+			 */
+			loaded: function(module) {
+				// Make sure module is a string.
+				if (!YAHOO.lang.isString(module))
+					throw new TypeError("module must be a String.");
+					
+				// Make sure module is valid.
+				if (YAHOO.lang.isUndefined(_modules[module]))
+					throw module + " isn't a valid Thumbnail module";
+				
+				// Check the modules dependencies.
+				switch(module) {
+					case "Service":
+						// Return true if all the dependencies are loaded.
+						if (YAHOO.util.Dom && YAHOO.util.Event && YAHOO.util.Connect)
+							return true;
+						
+						break;
+						
+					case "Tooltip":
+						// Return true if all the dependencies are loaded.
+						if (YAHOO.widget.Tooltip)
+							return true;
+							
+						break;
+				};
+					
+				// Throw error if dependencies aren't loaded and YUI Loader is undefined.
+				if (!YAHOO.util.YUILoader)
+					throw "YAHOO.util.Dom, YAHOO.util.Event, and YAHOO.util.Connect are required unless YAHOO.util.YUILoader is provided.";
+					
+				return false;
+			},
+			
+			/**
+			 * Loads the required YUI dependencies.
+			 *
+			 * @param		{String}	module
+			 * @param		{Function}	callback
+			 * @return		{void}
+			 * @public
+			 */
+			load: function(module, callback) {
+				// Make sure module is a string.
+				if (!YAHOO.lang.isString(module))
+					throw new TypeError("module must be a String.");
+				
+				// Make sure module is valid.
+				if (YAHOO.lang.isUndefined(_modules[module]))
+					throw module + " isn't a valid Thumbnail module";
+				
+				// Make sure callback is a function.
+				if (!YAHOO.lang.isFunction(callback))
+					throw new TypeError("callback must be a function.");
+				
+				// If the required dependencies are loaded call the callback function.
+				if (this.loaded(module))
+					return callback();
+					
+				// Create new YUI Loader and load required dependencies.
+				_loader = new YAHOO.util.YUILoader({
+					require:	_modules[module],
+					onSuccess:	callback
+				});
+				
+				_loader.insert();
+			}
+		};
+	}();
 	
 	
 	/**
 	 * Thumbnail Service: Object to handle async retrevial and caching of website thumbnails.
+	 * 
+	 * @class		Service
+	 * @singelton
 	 */
-	EDF.Thumbnail.Service = function() {
+	EDF.Thumbnail.Service = function(){
+		
+		/**
+		 * Hold the initialization state.
+		 * 
+		 * @property	{Boolean}	_initialized
+		 * @private
+		 */
+		var _initialized = false;
 		
 		/**
 		 * URL of server-side Thumbnail Get script.
@@ -38,7 +142,7 @@ EDF.Thumbnail = {};
 		 * @property	{String}	_sourceURL
 		 * @private
 		 */
-		var _sourceURL;
+		var _sourceURL = null;
 		
 		/**
 		 * A cache of server-side requests and responses.
@@ -47,7 +151,6 @@ EDF.Thumbnail = {};
 		 * @private
 		 */
 		var _cache = [];
-		
 		
 		/**
 		 * URL Root - Returns the hostname for a URL.
@@ -58,7 +161,7 @@ EDF.Thumbnail = {};
 		 */
 		var urlRoot = function(url) {
 			// Make sure a URL exists and is a String
-			if (!Lang.isString(url)) 
+			if (!YAHOO.lang.isString(url)) 
 				throw new TypeError("url must be a string.");
 			
 			// Helper function to determine if URL is a URI
@@ -71,7 +174,7 @@ EDF.Thumbnail = {};
 			
 			// Return the hostname if URL is a URI
 			if (isAbsolute(url)) 
-				return url.substring(7, url.indexOf("/", 7));
+				return url.substring(7, url.indexOf("/", 7) >= 0 ? url.indexOf("/", 7) : url.length);
 			else 
 				return url;
 		};
@@ -85,7 +188,7 @@ EDF.Thumbnail = {};
 		 */
 		var getCached = function(url) {
 			// Make sure a URL exists and is a String
-			if (!Lang.isString(url)) 
+			if (!YAHOO.lang.isString(url)) 
 				throw new TypeError("url must be a string.");
 			
 			// Loop over the cache to check for an entry matching the URL
@@ -107,11 +210,11 @@ EDF.Thumbnail = {};
 		 */
 		var setCached = function(url, response) {
 			// Make sure a URL exists and is a String
-			if (!Lang.isString(url)) 
+			if (!YAHOO.lang.isString(url)) 
 				throw new TypeError("url must be a string.");
 				
 			// Make sure a response has been defined
-			if (Lang.isUndefined(response)) {
+			if (YAHOO.lang.isUndefined(response)) {
 				throw new TypeError("response must be defined.");
 				return null;
 			}
@@ -132,6 +235,7 @@ EDF.Thumbnail = {};
 		
 		
 		return {
+			
 			/**
 			 * Initialize - Setup the Thumbnail object with a sourceURL.
 			 *
@@ -139,13 +243,32 @@ EDF.Thumbnail = {};
 			 * @return		{Boolean}	isInitialized
 			 * @public
 			 */
-			init: function(sourceURL) {
-				// Make sure a sourceURL exists and is a String
-				if (!Lang.isString(sourceURL)) 
-					throw new TypeError("sourceURL must be a string.");
+			init: function(sourceURL, callback) {
+				// Wrap initialization to check dependencies first.
+				var initialize = function() {
+					// Make sure sourceURL is a String
+					if (!YAHOO.lang.isString(sourceURL)) 
+						throw new TypeError("sourceURL must be a string.");
+						
+					// Make sure callback is a function
+					if (!YAHOO.lang.isFunction)
+						throw new TypeError("callback must be a function.");
 					
-				// Set the sourceURL
-				_sourceURL = sourceURL;
+					// Set the sourceURL
+					_sourceURL = sourceURL;
+					
+					// Set initialized flag
+					_initialized = true;
+					
+					// Call the callback function
+					callback();
+				};
+				
+				// Make sure dependencies are loaded
+				if (EDF.Thumbnail.Dependencies.loaded("Service"))
+					initialize();
+				else
+					EDF.Thumbnail.Dependencies.load("Service", initialize);
 			},
 			
 			/**
@@ -157,25 +280,29 @@ EDF.Thumbnail = {};
 			 * @public
 			 */
 			getThumbnail: function(url, callback) {
+				// Make sure the Service is initialized
+				if (!_initialized)
+					throw "Thumbnail Service hasn't been initialized.";
+				
 				// Make sure a sourceURL exists and is a String
-				if (!Lang.isString(url))
+				if (!YAHOO.lang.isString(url))
 					throw new TypeError("url must be a string.");
 					
 				// Make sure a callback exists and is a Function
-				if (!Lang.isFunction(callback))
+				if (!YAHOO.lang.isFunction(callback))
 					throw new TypeError("callback must be a function.");
 				
 				// Check the cache to avoid async call to server
 				var thumbnail = getCached(url);
-				if (Lang.isValue(thumbnail)) 
+				if (YAHOO.lang.isValue(thumbnail)) 
 					return callback(thumbnail);
 				
 				// Make sure a Source URL is set to lookup thumbnails from
-				if (!Lang.isString(_sourceURL))
+				if (!YAHOO.lang.isString(_sourceURL))
 					throw new Error("Thumbnail Service must be initialized.");
 				
 				// Async call to server to get and cache the thumbnail for a URL
-				var request = Connect.asyncRequest("GET", _sourceURL + url, {
+				var request = YAHOO.util.Connect.asyncRequest("GET", _sourceURL + url, {
 					success: function(response) {
 						return callback(setCached(url, response.responseText));
 					},
@@ -190,84 +317,37 @@ EDF.Thumbnail = {};
 	
 	
 	/**
-	 * Thumbnail Viewer: Class constructor to create presentation wrapper around Thumbnail object's functionality.
+	 * Thumbnail Tooltip: Wrapper to provide a tooltip for a thumbnail image.
 	 * 
-	 * @param		{string}	id
-	 * @return		void
+	 * @param		{HTMLElement|String}	element
+	 * @param		{Object}				config
+	 * @return		{void}
+	 * @constructor
 	 * @public
 	 */
-	EDF.Thumbnail.Viewer = function(id) {
-		// Make sure an ID exists and is a String
-		if (!Lang.isString(id))
-			throw new TypeError("id must be a string.");
-		
-		// YUI Overlay configuration
-		var config = {
-			visible:	false,
-			width:		"201px",
-			height:		"147px",
-			zIndex:		1000
+	EDF.Thumbnail.Tooltip = function(element, config) {
+		var setTooltip = function() {
+			this.toolTip = new YAHOO.widget.Tooltip(element, config);
+			
+			this.toolTip.contextTriggerEvent.subscribe(function(type, args) {
+				var toolTip = this;
+				var context = args[0];
+				var url = context.getAttribute("href");
+				
+				if (url) {
+					toolTip.cfg.setProperty("text", '<img alt="Loading..." src="img/loading.gif" />');
+				
+					EDF.Thumbnail.Service.getThumbnail(url, function(thumbnail){
+						toolTip.cfg.setProperty("text", thumbnail);
+					});
+				}
+			});
 		};
 		
-		// Create ThumbnailViewer's instance overlay as a YUI Overlay
-		this._overlay = new Overlay(id, config);
-		this._overlay.setBody("");
-		this._overlay.render(document.body);
-		
-		// Create ThumbnailViewer's instance timer
-		this._timer = null;
+		// Make sure dependencies are loaded
+		if (EDF.Thumbnail.Dependencies.loaded("Tooltip"))
+			setTooltip();
+		else
+			EDF.Thumbnail.Dependencies.load("Tooltip", setTooltip);
 	};
-	
-	
-	/**
-	 * Thumbnail Viewer - Show: Make the instance Overlay visible and retreive a URL's thumbnail.
-	 * 
-	 * @param		{String}		url
-	 * @param		{HTMLElement}	context (optional)
-	 * @param		{Number}		delay (optional)
-	 * @return		void
-	 * @public
-	 */
-	EDF.Thumbnail.Viewer.prototype.show = function(url, context, delay) {
-		// Make sure a URL exists and is a String
-		if (!Lang.isString(url))
-			throw new TypeError("url must be a string.");
-			
-		// Set context for overlay
-		var _overlay = this._overlay;
-		
-		// Retrieves thumbnail for URL and displays it in the instance overlay		
-		var loadThumbnail = function() {
-			_overlay.setBody('<div class="loading"></div>');
-			
-			// Set instance overlay's contextual
-			if (Lang.isValue(context))
-				_overlay.cfg.setProperty("context", [context, "tl", "bl"]);
-			
-			// Callback function after retrieving thumbnail
-			var callback = function(thumbnail) {
-				_overlay.setBody(thumbnail);
-				_overlay.align("tl", "bl");
-			};
-			
-			// Retreive the Thumbnail for the URL from the Service and set as the Overlay's body
-			EDF.Thumbnail.Service.getThumbnail(url, callback);
-			_overlay.show();
-		};
-		
-		// Set intance timer to Load Thumbnail after Delay
-		this._timer = setTimeout(loadThumbnail, Lang.isNumber(delay) ? delay : 500);
-	};
-	
-	
-	/**
-	 * Thumbnail Viewer - Hide: Make the instance Overlay hidden.
-	 * 
-	 * @return		void
-	 * @public
-	 */
-	EDF.Thumbnail.Viewer.prototype.hide = function() {
-		clearTimeout(this._timer);
-		this._overlay.hide();
-	};
-}());
+})();
