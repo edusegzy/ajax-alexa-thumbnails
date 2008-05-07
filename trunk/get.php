@@ -1,6 +1,6 @@
 <?php
 
-require("alexa-service.php");
+require("alexa_service.php");
 
 
 $access_key_id		= "[AWS ACCESS KEY ID]";
