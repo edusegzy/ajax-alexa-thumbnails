@@ -30,61 +30,51 @@
 	 * @class		Dependencies
 	 * @singleton
 	 */
-	EDF.Thumbnail.Dependencies = function() {
-		// Object to hold each modules YUI dependencies.
-		var _modules = {
-			Service:	["dom", "event", "connection"],
-			Tooltip:	["container"]
-		};
+	var Dependencies = function() {
+		/**
+		 * Holds each modules YUI dependencies.
+		 * 
+		 * @property	{Object}	_modules
+		 * @private
+		 */
+		var _modules = {};
 		
-		// YUI Loader object.
+		/**
+		 * YUI Loader object.
+		 * 
+		 * @property	{Object}	loader
+		 */
 		var _loader = null;
 		
 		
-		return {
+		var Public = {
 			
 			/**
-			 * Determines whether the YUI dependencies have been loaded.
+			 * Registers a module with it's YUI dependencies.
 			 * 
 			 * @param		{String}	module
-			 * @return		{Boolean}	loaded
-			 * @public
+			 * @param		{Object}	data
+			 * @return		{void}
 			 */
-			loaded: function(module) {
-				// Make sure module is a string.
+			addModule: function(module, data) {
+				// Make sure module is a String.
 				if (!YAHOO.lang.isString(module))
 					throw new TypeError("module must be a String.");
 					
-				// Make sure module is valid.
-				if (YAHOO.lang.isUndefined(_modules[module]))
-					throw module + " isn't a valid Thumbnail module";
-				
-				// Check the modules dependencies.
-				switch(module) {
-					case "Service":
-						// Return true if all the dependencies are loaded.
-						if (YAHOO.util.Dom && YAHOO.util.Event && YAHOO.util.Connect)
-							return true;
-						
-						break;
-						
-					case "Tooltip":
-						// Return true if all the dependencies are loaded.
-						if (YAHOO.widget.Tooltip)
-							return true;
-							
-						break;
-				};
+				// Make sure the module isn't already defined.
+				if (!YAHOO.lang.isUndefined(_modules[module]))
+					throw new TypeError("Module: " + module + " is already defined.");
 					
-				// Throw error if dependencies aren't loaded and YUI Loader is undefined.
-				if (!YAHOO.util.YUILoader)
-					throw "YAHOO.util.Dom, YAHOO.util.Event, and YAHOO.util.Connect are required unless YAHOO.util.YUILoader is provided.";
+				// Make sure requires is a String or Array.
+				if (!YAHOO.lang.isObject(data))
+					throw new TypeError("data must be an Object.");
 					
-				return false;
+				// Register module and it's dependencies.
+				_modules[module] = data;
 			},
 			
 			/**
-			 * Loads the required YUI dependencies.
+			 * Checks for and loads (if needed) the required YUI dependencies.
 			 *
 			 * @param		{String}	module
 			 * @param		{Function}	callback
@@ -103,20 +93,30 @@
 				// Make sure callback is a function.
 				if (!YAHOO.lang.isFunction(callback))
 					throw new TypeError("callback must be a function.");
-				
-				// If the required dependencies are loaded call the callback function.
-				if (this.loaded(module))
+					
+				// Check if required dependencies are loaded and loaded them if needed.
+				if (_modules[module].loaded()) {
 					return callback();
 					
-				// Create new YUI Loader and load required dependencies.
-				_loader = new YAHOO.util.YUILoader({
-					require:	_modules[module],
-					onSuccess:	callback
-				});
-				
-				_loader.insert();
+				} else if (!YAHOO.util.YUILoader) {
+					
+					throw "YUI dependencies: " + _modules[module] + " are required unless YAHOO.util.YUILoader is provided.";
+					
+				} else {
+					
+					// Create new YUI Loader and load required dependencies.
+					_loader = new YAHOO.util.YUILoader({
+						require:	_modules[module].requires,
+						onSuccess:	callback
+					});
+					
+					_loader.insert();
+				}
 			}
 		};
+		
+		
+		return Public;
 	}();
 	
 	
@@ -127,6 +127,14 @@
 	 * @singelton
 	 */
 	EDF.Thumbnail.Service = function(){
+		
+		/**
+		 * List of required YUI dependencies.
+		 * 
+		 * @property	{Array}		requires
+		 * @private
+		 */
+		var _requires = ["dom", "event", "connection"];
 		
 		/**
 		 * Hold the initialization state.
@@ -159,14 +167,14 @@
 		 * @return		{String}	hostname
 		 * @private
 		 */
-		var urlRoot = function(url) {
+		var _urlRoot = function(url) {
 			// Make sure a URL exists and is a String
 			if (!YAHOO.lang.isString(url)) 
 				throw new TypeError("url must be a string.");
 			
 			// Helper function to determine if URL is a URI
 			var isAbsolute = function(url) {
-				if (url.indexOf("http://") == 0) 
+				if (url.indexOf("http://") === 0) 
 					return true;
 				else 
 					return false;
@@ -186,14 +194,14 @@
 		 * @return		{String}	cachedResponse
 		 * @private
 		 */
-		var getCached = function(url) {
+		var _getCached = function(url) {
 			// Make sure a URL exists and is a String
 			if (!YAHOO.lang.isString(url)) 
 				throw new TypeError("url must be a string.");
 			
 			// Loop over the cache to check for an entry matching the URL
 			for (var i in _cache) 
-				if (urlRoot(url) == _cache[i].request) 
+				if (_urlRoot(url) == _cache[i].request) 
 					return _cache[i].response;
 			
 			// No cache entry was found for the URL
@@ -208,25 +216,23 @@
 		 * @return		{String}	response
 		 * @private
 		 */
-		var setCached = function(url, response) {
+		var _setCached = function(url, response) {
 			// Make sure a URL exists and is a String
 			if (!YAHOO.lang.isString(url)) 
 				throw new TypeError("url must be a string.");
 				
 			// Make sure a response has been defined
-			if (YAHOO.lang.isUndefined(response)) {
+			if (YAHOO.lang.isUndefined(response))
 				throw new TypeError("response must be defined.");
-				return null;
-			}
 			
 			// Check if request is cached and update response
 			for (var i in _cache) 
-				if (urlRoot(url) == _cache[i].request) 
-					return _cache[i].response = response;
+				if (_urlRoot(url) == _cache[i].request) 
+					return (_cache[i].response = response);
 			
 			// Append request-response pair to the cache
 			_cache.push({
-				request:	urlRoot(url),
+				request:	_urlRoot(url),
 				response:	response
 			});
 			
@@ -234,7 +240,7 @@
 		};
 		
 		
-		return {
+		var Public = {
 			
 			/**
 			 * Initialize - Setup the Thumbnail object with a sourceURL.
@@ -244,8 +250,12 @@
 			 * @public
 			 */
 			init: function(sourceURL, callback) {
-				// Wrap initialization to check dependencies first.
-				var initialize = function() {
+				// Call the callback function if Services is already initialized.
+				if (_initialized)
+					return callback();
+					
+				// Make sure dependencies are loaded then initialize
+				Dependencies.load("Service", function(){
 					// Make sure sourceURL is a String
 					if (!YAHOO.lang.isString(sourceURL)) 
 						throw new TypeError("sourceURL must be a string.");
@@ -262,13 +272,7 @@
 					
 					// Call the callback function
 					callback();
-				};
-				
-				// Make sure dependencies are loaded
-				if (EDF.Thumbnail.Dependencies.loaded("Service"))
-					initialize();
-				else
-					EDF.Thumbnail.Dependencies.load("Service", initialize);
+				});
 			},
 			
 			/**
@@ -293,7 +297,7 @@
 					throw new TypeError("callback must be a function.");
 				
 				// Check the cache to avoid async call to server
-				var thumbnail = getCached(url);
+				var thumbnail = _getCached(url);
 				if (YAHOO.lang.isValue(thumbnail)) 
 					return callback(thumbnail);
 				
@@ -303,51 +307,29 @@
 				
 				// Async call to server to get and cache the thumbnail for a URL
 				var request = YAHOO.util.Connect.asyncRequest("GET", _sourceURL + url, {
-					success: function(response) {
-						return callback(setCached(url, response.responseText));
-					},
-					
-					failure: function(response) {
-						return callback(null);
-					}
+					success: 	function(response) {
+									return callback(_setCached(url, response.responseText));
+								},
+								
+					failure:	function(response) {
+									return callback(null);
+								}
 				});
 			}
 		};
-	}();
-	
-	
-	/**
-	 * Thumbnail Tooltip: Wrapper to provide a tooltip for a thumbnail image.
-	 * 
-	 * @param		{HTMLElement|String}	element
-	 * @param		{Object}				config
-	 * @return		{void}
-	 * @constructor
-	 * @public
-	 */
-	EDF.Thumbnail.Tooltip = function(element, config) {
-		var setTooltip = function() {
-			this.toolTip = new YAHOO.widget.Tooltip(element, config);
-			
-			this.toolTip.contextTriggerEvent.subscribe(function(type, args) {
-				var toolTip = this;
-				var context = args[0];
-				var url = context.getAttribute("href");
-				
-				if (url) {
-					toolTip.cfg.setProperty("text", '<img alt="Loading..." src="img/loading.gif" />');
-				
-					EDF.Thumbnail.Service.getThumbnail(url, function(thumbnail){
-						toolTip.cfg.setProperty("text", thumbnail);
-					});
-				}
-			});
-		};
 		
-		// Make sure dependencies are loaded
-		if (EDF.Thumbnail.Dependencies.loaded("Tooltip"))
-			setTooltip();
-		else
-			EDF.Thumbnail.Dependencies.load("Tooltip", setTooltip);
-	};
+		
+		// Register Service's YUI dependencies.
+		Dependencies.addModule("Service", {
+			requires:	_requires,
+			loaded:		function() {
+							if (YAHOO.util.Dom && YAHOO.util.Event && YAHOO.util.Connect)
+								return true;
+							else
+								return false;
+						}
+		});
+		
+		return Public;
+	}();
 })();
