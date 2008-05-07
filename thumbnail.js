@@ -30,7 +30,7 @@
 	 * @class		Dependencies
 	 * @singleton
 	 */
-	var Dependencies = function() {
+	EDF.Thumbnail.Dependencies = function() {
 		/**
 		 * Holds each modules YUI dependencies.
 		 * 
@@ -53,10 +53,10 @@
 			 * Registers a module with it's YUI dependencies.
 			 * 
 			 * @param		{String}	module
-			 * @param		{Object}	data
+			 * @param		{Object}	dependencies
 			 * @return		{void}
 			 */
-			addModule: function(module, data) {
+			addModule: function(module, dependencies) {
 				// Make sure module is a String.
 				if (!YAHOO.lang.isString(module))
 					throw new TypeError("module must be a String.");
@@ -65,12 +65,16 @@
 				if (!YAHOO.lang.isUndefined(_modules[module]))
 					throw new TypeError("Module: " + module + " is already defined.");
 					
-				// Make sure requires is a String or Array.
-				if (!YAHOO.lang.isObject(data))
-					throw new TypeError("data must be an Object.");
+				// Make sure dependencies.requires is a String or Array.
+				if (!YAHOO.lang.isString(dependencies.requires) && !YAHOO.lang.isArray(dependencies.requires))
+					throw new TypeError("dependencies.requires must be a String or an Array.");
+					
+				// Make sure dependencies.check is a Function.
+				if (!YAHOO.lang.isFunction(dependencies.check))
+					throw new TypeError("dependencies.check must be a Function.");
 					
 				// Register module and it's dependencies.
-				_modules[module] = data;
+				_modules[module] = dependencies;
 			},
 			
 			/**
@@ -95,12 +99,12 @@
 					throw new TypeError("callback must be a function.");
 					
 				// Check if required dependencies are loaded and loaded them if needed.
-				if (_modules[module].loaded()) {
+				if (_modules[module].check()) {
 					return callback();
 					
 				} else if (!YAHOO.util.YUILoader) {
 					
-					throw "YUI dependencies: " + _modules[module] + " are required unless YAHOO.util.YUILoader is provided.";
+					throw "YUI dependencies: " + _modules[module].requires + " are required unless YAHOO.util.YUILoader is provided.";
 					
 				} else {
 					
@@ -129,12 +133,17 @@
 	EDF.Thumbnail.Service = function(){
 		
 		/**
-		 * List of required YUI dependencies.
+		 * Object holding module's YUI required dependencies and check [if they're loaded] function.
 		 * 
-		 * @property	{Array}		requires
+		 * @property	{Object}	_dependencies
 		 * @private
 		 */
-		var _requires = ["dom", "event", "connection"];
+		var _dependencies = {
+			requires:	["dom", "event", "connection"],
+			check:		function() {
+							return (YAHOO.util.Dom && YAHOO.util.Event && YAHOO.util.Connect) ? true : false;
+						}
+		};
 		
 		/**
 		 * Hold the initialization state.
@@ -168,10 +177,6 @@
 		 * @private
 		 */
 		var _urlRoot = function(url) {
-			// Make sure a URL exists and is a String
-			if (!YAHOO.lang.isString(url)) 
-				throw new TypeError("url must be a string.");
-			
 			// Helper function to determine if URL is a URI
 			var isAbsolute = function(url) {
 				if (url.indexOf("http://") === 0) 
@@ -195,13 +200,12 @@
 		 * @private
 		 */
 		var _getCached = function(url) {
-			// Make sure a URL exists and is a String
-			if (!YAHOO.lang.isString(url)) 
-				throw new TypeError("url must be a string.");
+			// Use just the URL's root.
+			url = _urlRoot(url);
 			
 			// Loop over the cache to check for an entry matching the URL
 			for (var i in _cache) 
-				if (_urlRoot(url) == _cache[i].request) 
+				if (url == _cache[i].request) 
 					return _cache[i].response;
 			
 			// No cache entry was found for the URL
@@ -217,25 +221,23 @@
 		 * @private
 		 */
 		var _setCached = function(url, response) {
-			// Make sure a URL exists and is a String
-			if (!YAHOO.lang.isString(url)) 
-				throw new TypeError("url must be a string.");
-				
-			// Make sure a response has been defined
-			if (YAHOO.lang.isUndefined(response))
-				throw new TypeError("response must be defined.");
+			// Use just the URL's root.
+			url = _urlRoot(url);
 			
 			// Check if request is cached and update response
 			for (var i in _cache) 
-				if (_urlRoot(url) == _cache[i].request) 
-					return (_cache[i].response = response);
+				if (url == _cache[i].request) {
+					_cache[i].response = response
+					return response;
+				}
 			
 			// Append request-response pair to the cache
 			_cache.push({
-				request:	_urlRoot(url),
+				request:	url,
 				response:	response
 			});
 			
+			// Return the response that was passed.
 			return response;
 		};
 		
@@ -254,16 +256,16 @@
 				if (_initialized)
 					return callback();
 					
-				// Make sure dependencies are loaded then initialize
-				Dependencies.load("Service", function(){
-					// Make sure sourceURL is a String
-					if (!YAHOO.lang.isString(sourceURL)) 
-						throw new TypeError("sourceURL must be a string.");
-						
-					// Make sure callback is a function
-					if (!YAHOO.lang.isFunction)
-						throw new TypeError("callback must be a function.");
+				// Make sure sourceURL is a String
+				if (!YAHOO.lang.isString(sourceURL)) 
+					throw new TypeError("sourceURL must be a string.");
 					
+				// Make sure callback is a function
+				if (!YAHOO.lang.isFunction)
+					throw new TypeError("callback must be a function.");
+				
+				// Make sure dependencies are loaded then initialize
+				EDF.Thumbnail.Dependencies.load("Service", function(){
 					// Set the sourceURL
 					_sourceURL = sourceURL;
 					
@@ -296,39 +298,30 @@
 				if (!YAHOO.lang.isFunction(callback))
 					throw new TypeError("callback must be a function.");
 				
-				// Check the cache to avoid async call to server
+				// Check the cache first, if no result make async call to the server
 				var thumbnail = _getCached(url);
-				if (YAHOO.lang.isValue(thumbnail)) 
+				
+				if (YAHOO.lang.isValue(thumbnail)) {
 					return callback(thumbnail);
-				
-				// Make sure a Source URL is set to lookup thumbnails from
-				if (!YAHOO.lang.isString(_sourceURL))
-					throw new Error("Thumbnail Service must be initialized.");
-				
-				// Async call to server to get and cache the thumbnail for a URL
-				var request = YAHOO.util.Connect.asyncRequest("GET", _sourceURL + url, {
-					success: 	function(response) {
-									return callback(_setCached(url, response.responseText));
-								},
-								
-					failure:	function(response) {
-									return callback(null);
-								}
-				});
+					
+				} else {
+					
+					var request = YAHOO.util.Connect.asyncRequest("GET", _sourceURL + url, {
+						success: 	function(response) {
+										thumbnail = _setCached(url, response.responseText);
+										return callback(thumbnail);
+									},
+						failure:	function(response) {
+										return callback(null);
+									}
+					});
+				}
 			}
 		};
 		
 		
 		// Register Service's YUI dependencies.
-		Dependencies.addModule("Service", {
-			requires:	_requires,
-			loaded:		function() {
-							if (YAHOO.util.Dom && YAHOO.util.Event && YAHOO.util.Connect)
-								return true;
-							else
-								return false;
-						}
-		});
+		EDF.Thumbnail.Dependencies.addModule("Service", _dependencies);
 		
 		return Public;
 	}();
