@@ -282,10 +282,11 @@
 			 *
 			 * @param		{String}	url
 			 * @param		{Function}	callback
+			 * @param		{Object}	options (optional)
 			 * @return		void
 			 * @public
 			 */
-			getThumbnail: function(url, callback) {
+			getThumbnail: function(url, callback, options) {
 				// Make sure the Service is initialized
 				if (!_initialized)
 					throw "Thumbnail Service hasn't been initialized.";
@@ -306,7 +307,17 @@
 					
 				} else {
 					
-					var request = YAHOO.util.Connect.asyncRequest("GET", _sourceURL + url, {
+					var defaults = {
+						size:	"Small"
+					};
+					
+					options = YAHOO.lang.merge(defaults, (options || {}));
+					
+					var requestURL = _sourceURL
+								   + "?url=" + url
+								   + "&size=" + options.size;
+					
+					var request = YAHOO.util.Connect.asyncRequest("GET", requestURL, {
 						success: 	function(response) {
 										thumbnail = _setCached(url, response.responseText);
 										return callback(thumbnail);
