@@ -1,5 +1,5 @@
 /**
- * Ajax Alexa Thumbnails
+ * Ajax Alexa Thumbnails - 0.3
  * 
  * @author		Eric Ferraiuolo <eferraiuolo@gmail.com>
  * @copyright	2008 Eric Ferraiuolo
@@ -43,6 +43,7 @@
 		 * YUI Loader object.
 		 * 
 		 * @property	{Object}	loader
+		 * @private
 		 */
 		var _loader = null;
 		
@@ -83,7 +84,6 @@
 			 * @param		{String}	module
 			 * @param		{Function}	callback
 			 * @return		{void}
-			 * @public
 			 */
 			load: function(module, callback) {
 				// Make sure module is a string.
@@ -249,7 +249,6 @@
 			 *
 			 * @param		{String}	sourceURL
 			 * @return		{Boolean}	isInitialized
-			 * @public
 			 */
 			init: function(sourceURL, callback) {
 				// Call the callback function if Services is already initialized.
@@ -284,7 +283,6 @@
 			 * @param		{Function}	callback
 			 * @param		{Object}	options (optional)
 			 * @return		void
-			 * @public
 			 */
 			getThumbnail: function(url, callback, options) {
 				// Make sure the Service is initialized
@@ -315,7 +313,7 @@
 					
 					var requestURL = _sourceURL
 								   + "?url=" + url
-								   + "&size=" + options.size;
+								   + "&size=" + options.size.substr(0,1).toUpperCase() + options.size.substr(1);
 					
 					var request = YAHOO.util.Connect.asyncRequest("GET", requestURL, {
 						success: 	function(response) {
