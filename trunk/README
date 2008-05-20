@@ -1,0 +1,9 @@
+Ajax Alexa Thumbnails:
+
+Frontend UI code to allow async calls (Ajax) to Amazon's Alexa Thumbnail Service.
+Mostly written in JavaScript utilizing the YUI library.
+
+Author:		Eric Ferraiuolo <eferraiuolo@gmail.com>
+Copyright:	2008 Eric Ferraiuolo
+License:	GNU LGPL <http://www.gnu.org/licenses/lgpl.html>
+Website:	http://code.google.com/p/ajax-alexa-thumbnails/
