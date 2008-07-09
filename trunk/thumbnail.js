@@ -1,5 +1,5 @@
 /**
- * Ajax Alexa Thumbnails - 0.3
+ * Ajax Alexa Thumbnails - 0.3.1
  * 
  * @author		Eric Ferraiuolo <eferraiuolo@gmail.com>
  * @copyright	2008 Eric Ferraiuolo
@@ -260,7 +260,7 @@
 					throw new TypeError("sourceURL must be a string.");
 					
 				// Make sure callback is a function
-				if (!YAHOO.lang.isFunction)
+				if (!YAHOO.lang.isFunction(callback))
 					throw new TypeError("callback must be a function.");
 				
 				// Make sure dependencies are loaded then initialize
