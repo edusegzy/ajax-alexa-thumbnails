@@ -7,8 +7,13 @@
  */
 
 
-// Get a thumbnail URL from the thumbnail service. The returned image is enclosed in an achor tag (<a> <img/> </a>).
-function get_thumbnail_link($access_key_id, $secret_access_key, $size, $default_image, $url) {
+$access_key_id		= "[AWS ACCESS KEY ID]";
+$secret_access_key	= "[AWS SECRET ACCESS KEY]";
+$default_noimage	= "";
+
+
+// Get a thumbnail URL from the thumbnail service
+function get_thumbnail_image($access_key_id, $secret_access_key, $size, $default_image, $url) {
         $timestamp =  generate_timestamp();
         $url_enc = urlencode($url);
         $timestamp_enc = urlencode($timestamp);
@@ -39,18 +44,7 @@ function get_thumbnail_link($access_key_id, $secret_access_key, $size, $default_
 				$image_url = $thumbnail->firstChild->nodeValue;
 			}
 		}
-		return get_html_snippet($url, $image_url);
-}
-
-
-// Returns an HTML snippet which will display the thumbnail image url and link to the website.  Returns an empty string if the image is null or empty.
-function get_html_snippet($url, $image) {
-	$link = "";
-	$navigable_url = (stristr($url,"http://") == $url ) ? $url : "http://".$url;
-	if ($image) {
-		$link = "<a href='$navigable_url'><img border='0' src='$image' alt='$url'/></a>";
-	}
-	return $link;
+		return $image_url;
 }
 
 
@@ -83,5 +77,11 @@ function make_http_request($url){
        curl_close($ch);
        return $result;
 }
+
+
+$url = isset($_GET['url']) ? $_GET['url'] : null;
+$size = (isset($_GET['size']) && ($_GET['size']=="Small" || $_GET['size']=="Large")) ? $_GET['size'] : "Small";
+$image_url = $url ? get_thumbnail_image($access_key_id, $secret_access_key, $size, $default_noimage, $url) : '';
+echo "$image_url";
 
 ?>
