@@ -1,5 +1,5 @@
 /**
- * Ajax Alexa Thumbnails - 0.3.1
+ * Ajax Alexa Thumbnails - 0.4
  * 
  * @author		Eric Ferraiuolo <eferraiuolo@gmail.com>
  * @copyright	2008 Eric Ferraiuolo
@@ -7,331 +7,215 @@
  */
 
 
-(function(){
-	// Throw error if YAHOO Global Object isn't defined.
-	if (typeof YAHOO == "undefined")
-		throw "YAHOO Golbal Object is required.";
-	
-	
-	// Create EDF namespace if it doesn't exist
-	if (typeof EDF == "undefined")
-		EDF = {};
-	
-	
-	/**
-	 * Thumbnail: Object containing the Thumbnail Server and Thumbnail Widgets.
-	 */
-	EDF.Thumbnail = {};
-	
+// Create YUI namespace for module.
+YAHOO.namespace('EDF.Thumbnail');
+
+
+/**
+ * Thumbnail: Object to handle async retrevial and caching of website thumbnails.
+ * 
+ * @class		Thumbnail
+ * @singelton
+ */
+YAHOO.EDF.Thumbnail = function() {
+	// Setup YUI shorthands
+	var Lang = YAHOO.lang;
+	var Connect = YAHOO.util.Connect;
 	
 	/**
-	 * Thumbnail Dependencies: Object to handle YUI dependency management.
+	 * Default thumbnail options.
 	 * 
-	 * @class		Dependencies
-	 * @singleton
+	 * @property	{Object}	_defaults
+	 * @private
 	 */
-	EDF.Thumbnail.Dependencies = function() {
-		/**
-		 * Holds each modules YUI dependencies.
-		 * 
-		 * @property	{Object}	_modules
-		 * @private
-		 */
-		var _modules = {};
+	var _defaults = {
+		source:	null,
+		size:	"Small",
+		anchor:	true
+	};
+	
+	/**
+	 * Object to hold the configured options.
+	 * 
+	 * @property	{Object}	_config
+	 * @private
+	 */
+	var _config = null;
+	
+	/**
+	 * Hold the initialization state.
+	 * 
+	 * @property	{Boolean}	_initialized
+	 * @private
+	 */
+	var _initialized = false;
+	
+	/**
+	 * A queue of requests waiting response from the server.
+	 * 
+	 * @property	{Object}	_queue
+	 * @private
+	 */
+	var _queue = null;
+	
+	/**
+	 * A cache of server-side requests and responses.
+	 * 
+	 * @property	{Object}	_cache
+	 * @private
+	 */
+	var _cache = null;
+	
+	/**
+	 * Hostname - Returns the hostname for a URL.
+	 *
+	 * @param		{String}	url
+	 * @return		{String}	hostname
+	 * @private
+	 */
+	function _hostname(url) {
+		// Helper function to determine if URL is a URI
+		function isAbsolute(url) {
+			return (url.indexOf("http://") === 0 ? true : false);
+		}
 		
-		/**
-		 * YUI Loader object.
-		 * 
-		 * @property	{Object}	loader
-		 * @private
-		 */
-		var _loader = null;
+		// Return the hostname of the URL
+		var startIndex = isAbsolute(url) ? 7 : 0;
+		return url.substring(startIndex, url.indexOf("/", startIndex) >= startIndex ? url.indexOf("/", startIndex) : url.length);
+	}
+	
+	/**
+	 * Create Elements - Creates the DOM img and optional anchor elements for a thumbnail.
+	 * 
+	 * @param		{String}		url
+	 * @param		{String}		imgSrc
+	 * @return		{HTMLElement}	element
+	 * @private
+	 */
+	function _createElements(url, imgSrc) {
+		var img = document.createElement("img");
+		img.setAttribute("alt", url);
+		img.setAttribute("src", imgSrc);
 		
-		
-		var Public = {
+		var element;
+		if (_config.anchor) {
+			element = document.createElement("a");
+			element.setAttribute("href", url);
+			element.appendChild(img);
 			
-			/**
-			 * Registers a module with it's YUI dependencies.
-			 * 
-			 * @param		{String}	module
-			 * @param		{Object}	dependencies
-			 * @return		{void}
-			 */
-			addModule: function(module, dependencies) {
-				// Make sure module is a String.
-				if (!YAHOO.lang.isString(module))
-					throw new TypeError("module must be a String.");
-					
-				// Make sure the module isn't already defined.
-				if (!YAHOO.lang.isUndefined(_modules[module]))
-					throw new TypeError("Module: " + module + " is already defined.");
-					
-				// Make sure dependencies.requires is a String or Array.
-				if (!YAHOO.lang.isString(dependencies.requires) && !YAHOO.lang.isArray(dependencies.requires))
-					throw new TypeError("dependencies.requires must be a String or an Array.");
-					
-				// Make sure dependencies.check is a Function.
-				if (!YAHOO.lang.isFunction(dependencies.check))
-					throw new TypeError("dependencies.check must be a Function.");
-					
-				// Register module and it's dependencies.
-				_modules[module] = dependencies;
-			},
+		} else {
 			
-			/**
-			 * Checks for and loads (if needed) the required YUI dependencies.
-			 *
-			 * @param		{String}	module
-			 * @param		{Function}	callback
-			 * @return		{void}
-			 */
-			load: function(module, callback) {
-				// Make sure module is a string.
-				if (!YAHOO.lang.isString(module))
-					throw new TypeError("module must be a String.");
+			element = img;
+		}
+		
+		return element;
+	}
+	
+	
+	var Public = {
+		
+		/**
+		 * Initialize - Setup the Thumbnail object with a sourceURL.
+		 *
+		 * @param		{Object}	config
+		 * @return		{Self}		this
+		 */
+		init: function(config) {
+			// Make sure config.source is a String
+			if (Lang.isString(config.source)) {
+				// Setup a new queue
+				_queue = {};
 				
-				// Make sure module is valid.
-				if (YAHOO.lang.isUndefined(_modules[module]))
-					throw module + " isn't a valid Thumbnail module";
+				// Setup a new cache
+				_cache = {};
 				
-				// Make sure callback is a function.
-				if (!YAHOO.lang.isFunction(callback))
-					throw new TypeError("callback must be a function.");
-					
-				// Check if required dependencies are loaded and loaded them if needed.
-				if (_modules[module].check()) {
-					return callback();
-					
-				} else if (!YAHOO.util.YUILoader) {
-					
-					throw "YUI dependencies: " + _modules[module].requires + " are required unless YAHOO.util.YUILoader is provided.";
-					
-				} else {
-					
-					// Create new YUI Loader and load required dependencies.
-					_loader = new YAHOO.util.YUILoader({
-						require:	_modules[module].requires,
-						onSuccess:	callback
-					});
-					
-					_loader.insert();
-				}
+				// Set the configuration options merging with the defaults
+				_config = Lang.merge(_defaults, (config || {}));
+				
+				// Set initialized flag
+				_initialized = true;
+				
+			} else {
+				
+				YAHOO.log("source must be of type String, the URL to the server-side lookup service.", "error", "EDF.Thumbnail.init");
+				_initialized = false;
 			}
-		};
-		
-		
-		return Public;
-	}();
-	
-	
-	/**
-	 * Thumbnail Service: Object to handle async retrevial and caching of website thumbnails.
-	 * 
-	 * @class		Service
-	 * @singelton
-	 */
-	EDF.Thumbnail.Service = function(){
+			
+			return this;
+		},
 		
 		/**
-		 * Object holding module's YUI required dependencies and check [if they're loaded] function.
-		 * 
-		 * @property	{Object}	_dependencies
-		 * @private
-		 */
-		var _dependencies = {
-			requires:	["dom", "event", "connection"],
-			check:		function() {
-							return (YAHOO.util.Dom && YAHOO.util.Event && YAHOO.util.Connect) ? true : false;
-						}
-		};
-		
-		/**
-		 * Hold the initialization state.
-		 * 
-		 * @property	{Boolean}	_initialized
-		 * @private
-		 */
-		var _initialized = false;
-		
-		/**
-		 * URL of server-side Thumbnail Get script.
-		 * 
-		 * @property	{String}	_sourceURL
-		 * @private
-		 */
-		var _sourceURL = null;
-		
-		/**
-		 * A cache of server-side requests and responses.
-		 * 
-		 * @property	{Array}		_cache
-		 * @private
-		 */
-		var _cache = [];
-		
-		/**
-		 * URL Root - Returns the hostname for a URL.
+		 * Get Thumbnail - Retreives a thumbnail for a URL and caches the result.
 		 *
 		 * @param		{String}	url
-		 * @return		{String}	hostname
-		 * @private
+		 * @param		{Function}	callback
+		 * @return		{Self}		this
 		 */
-		var _urlRoot = function(url) {
-			// Helper function to determine if URL is a URI
-			var isAbsolute = function(url) {
-				if (url.indexOf("http://") === 0) 
-					return true;
-				else 
-					return false;
-			};
+		getThumbnail: function(url, callback) {
+			// Make sure the module has been initialized
+			if (!_initialized) {
+				YAHOO.log("EDF.Thumbnail hasn't been initialized.", "error", "EDF.Thumbnail.get");
+				return this;
+			}
 			
-			// Return the hostname if URL is a URI
-			if (isAbsolute(url)) 
-				return url.substring(7, url.indexOf("/", 7) >= 0 ? url.indexOf("/", 7) : url.length);
-			else 
-				return url;
-		};
-		
-		/**
-		 * Get Cached - Checks the cache and returns the response if thumbnail for the URL is cached.
-		 *
-		 * @param		{String}	url
-		 * @return		{String}	cachedResponse
-		 * @private
-		 */
-		var _getCached = function(url) {
-			// Use just the URL's root.
-			url = _urlRoot(url);
+			// Type-check parameters
+			if (!Lang.isString(url)) {
+				YAHOO.log("url must be a string.", "error", "EDF.Thumbnail.get");
+				return this;
+			}
+			if (!Lang.isFunction(callback)) {
+				YAHOO.log("callback must be a function.", "error", "EDF.Thumbnail.get");
+				return this;
+			}
 			
-			// Loop over the cache to check for an entry matching the URL
-			for (var i in _cache) 
-				if (url == _cache[i].request) 
-					return _cache[i].response;
+			// Get the hostname of the URL
+			var hostname = _hostname(url);
 			
-			// No cache entry was found for the URL
-			return null;
-		};
-		
-		/**
-		 * Set Cached - Saves a request-response pair to cache.
-		 *
-		 * @param		{String}	url
-		 * @param		{String}	response
-		 * @return		{String}	response
-		 * @private
-		 */
-		var _setCached = function(url, response) {
-			// Use just the URL's root.
-			url = _urlRoot(url);
-			
-			// Check if request is cached and update response
-			for (var i in _cache) 
-				if (url == _cache[i].request) {
-					_cache[i].response = response
-					return response;
-				}
-			
-			// Append request-response pair to the cache
-			_cache.push({
-				request:	url,
-				response:	response
-			});
-			
-			// Return the response that was passed.
-			return response;
-		};
-		
-		
-		var Public = {
-			
-			/**
-			 * Initialize - Setup the Thumbnail object with a sourceURL.
-			 *
-			 * @param		{String}	sourceURL
-			 * @return		{Boolean}	isInitialized
-			 */
-			init: function(sourceURL, callback) {
-				// Call the callback function if Services is already initialized.
-				if (_initialized)
-					return callback();
-					
-				// Make sure sourceURL is a String
-				if (!YAHOO.lang.isString(sourceURL)) 
-					throw new TypeError("sourceURL must be a string.");
-					
-				// Make sure callback is a function
-				if (!YAHOO.lang.isFunction(callback))
-					throw new TypeError("callback must be a function.");
+			// Check the cache then the queue; if no result make async call to the server
+			if (hostname in _cache) {
+				callback(_createElements(url, _cache[hostname]));
 				
-				// Make sure dependencies are loaded then initialize
-				EDF.Thumbnail.Dependencies.load("Service", function(){
-					// Set the sourceURL
-					_sourceURL = sourceURL;
-					
-					// Set initialized flag
-					_initialized = true;
-					
-					// Call the callback function
-					callback();
-				});
-			},
-			
-			/**
-			 * Get Thumbnail - Retreives a thumbnail for a URL and caches the result.
-			 *
-			 * @param		{String}	url
-			 * @param		{Function}	callback
-			 * @param		{Object}	options (optional)
-			 * @return		void
-			 */
-			getThumbnail: function(url, callback, options) {
-				// Make sure the Service is initialized
-				if (!_initialized)
-					throw "Thumbnail Service hasn't been initialized.";
+			} else if (hostname in _queue) {
 				
-				// Make sure a sourceURL exists and is a String
-				if (!YAHOO.lang.isString(url))
-					throw new TypeError("url must be a string.");
-					
-				// Make sure a callback exists and is a Function
-				if (!YAHOO.lang.isFunction(callback))
-					throw new TypeError("callback must be a function.");
+				_queue[hostname].push(callback);
 				
-				// Check the cache first, if no result make async call to the server
-				var thumbnail = _getCached(url);
+			} else {
 				
-				if (YAHOO.lang.isValue(thumbnail)) {
-					return callback(thumbnail);
-					
-				} else {
-					
-					var defaults = {
-						size:	"Small"
-					};
-					
-					options = YAHOO.lang.merge(defaults, (options || {}));
-					
-					var requestURL = _sourceURL
-								   + "?url=" + url
-								   + "&size=" + options.size.substr(0,1).toUpperCase() + options.size.substr(1);
-					
-					var request = YAHOO.util.Connect.asyncRequest("GET", requestURL, {
-						success: 	function(response) {
-										thumbnail = _setCached(url, response.responseText);
-										return callback(thumbnail);
-									},
-						failure:	function(response) {
-										return callback(null);
+				// Add the hostname to the queue with the callback
+				_queue[hostname] = [callback];
+				
+				// Build the request URL
+				var requestURL = _config.source
+							   + "?url=" + url
+							   + "&size=" + _config.size.substr(0,1).toUpperCase() + _config.size.substr(1);
+				
+				// Do the Ajax request
+				Connect.asyncRequest("GET", requestURL, {
+					success: 	function(response) {
+									// Cache the thumbnail's img url.
+									_cache[hostname] = response.responseText;
+									
+									// Dequeue the hostname and call all added functions
+									while (_queue[hostname].length > 0) {
+										_queue[hostname].shift()(_createElements(url, _cache[hostname]));
 									}
-					});
-				}
+									delete _queue[hostname];
+								},
+					failure:	function(response) {
+									YAHOO.log("Connection with server could not be established.", "error", "EDF.Thumbnail.get");
+									callback(null);
+								}
+				});
 			}
-		};
-		
-		
-		// Register Service's YUI dependencies.
-		EDF.Thumbnail.Dependencies.addModule("Service", _dependencies);
-		
-		return Public;
-	}();
-})();
+			
+			return this;
+		}
+	};
+	
+	
+	return Public;
+}();
+
+
+// Register module with YUI
+YAHOO.register("EDF.Thumbnail", YAHOO.EDF.Thumbnail, { version:"0.4", build:"1" });
