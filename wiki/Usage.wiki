@@ -1,11 +1,9 @@
 #labels Featured,Phase-Implementation
-#explains how to use the project.
-
 = Usage =
 
 Hopefully have you have an AWS account and have signed up for the Alexa Site Thumbnail service; otherwise you can't get much further here.
 
-== 1) Configure alexa_service.php ==
+== 1) Configure `alexa_service.php` ==
 
 Using your AWS Access Identifiers, configure the following variables ($default_noimage is optional).
 {{{
@@ -23,15 +21,13 @@ Within the `<body></body>` tags add the YUI dependency scripts along with the th
 <script type="text/javascript" src="thumbnail-min.js"></script>
 }}}
 
-== 3) Initialize and use the EDF.Thumbnail module ==
+== 3) Initialize and use the `EDF.Thumbnail` module ==
 
-
+The following will initialize the `EDF.Thumbnail` module, point to the alexa_service.php that will handle the Ajax requests, use the _large_ size images, and wrap the image element with an anchor. After the module is initialized `EDF.Thumbnail.getThumbnail` is called to fetch the thumbnail and pass the result to the callback.
 {{{
 <script type="text/javascript">
 	(function(){
 		YAHOO.util.Event.onDOMReady(function(){
-			
-			var container = YAHOO.util.Dom.get("container");
 			
 			YAHOO.EDF.Thumbnail.init({
 				source:	"alexa_service.php",
@@ -39,10 +35,8 @@ Within the `<body></body>` tags add the YUI dependency scripts along with the th
 				anchor:	true
 			});
 			
-			YAHOO.EDF.Thumbnail.getThumbnail("http://code.google.com/p/ajax-alexa-thumbnails/", function(thumbnail){
-				container.appendChild(thumbnail);
-			}).getThumbnail("http://developer.yahoo.com/yui/", function(thumbnail){
-				container.appendChild(thumbnail);
+			YAHOO.EDF.Thumbnail.getThumbnail("http://www.google.com", function(thumbnail){
+				//alert(thumbnail);
 			});
 			
 		});
