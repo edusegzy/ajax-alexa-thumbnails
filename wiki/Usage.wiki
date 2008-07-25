@@ -1,5 +1,7 @@
 #labels Featured,Phase-Implementation
-= Usage =
+#details about configuring and using the project.
+
+= How to use the project =
 
 Hopefully have you have an AWS account and have signed up for the Alexa Site Thumbnail service; otherwise you can't get much further here.
 
