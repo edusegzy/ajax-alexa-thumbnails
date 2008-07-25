@@ -1,5 +1,5 @@
+#summary Details about configuring and using the project.
 #labels Featured,Phase-Implementation
-#`details about configuring and using the project.
 
 = How to use the project =
 
