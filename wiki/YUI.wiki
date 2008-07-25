@@ -1,8 +1,0 @@
-#summary One-sentence of summary of this page.
-
-= Introduction =
-
-Add your content here.
-
-
-== More Info ==
