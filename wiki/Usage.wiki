@@ -1,5 +1,5 @@
 #labels Featured,Phase-Implementation
-#Explains how to use the project.
+#explains how to use the project.
 
 = Usage =
 
