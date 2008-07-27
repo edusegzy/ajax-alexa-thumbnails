@@ -46,6 +46,8 @@ The following will initialize the `EDF.Thumbnail` module, point to the alexa_ser
 </script>
 }}}
 
+*[http://eric.ferraiuolo.name/projects/ajax-alexa-thumbnails/0.4.1/usage-standard.html Running example of using standard loading]*
+
 = Advance usage with YUI Loader =
 
 Another [recommended] option is to load and initialize the module using the [http://developer.yahoo.com/yui/yuiloader/ YUI Loader]. The `EDF.Thumbnail` module registers itself as a YUI module, therefore it integrates with the YUI Loader.
@@ -82,3 +84,5 @@ Another [recommended] option is to load and initialize the module using the [htt
 	}());
 </script>
 }}}
+
+*[http://eric.ferraiuolo.name/projects/ajax-alexa-thumbnails/0.4.1/usage-loader.html Running of example using the YUI Loader]*
