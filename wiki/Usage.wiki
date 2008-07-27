@@ -72,16 +72,13 @@ Another [recommended] option is to load and initialize the module using the [htt
 						anchor:	true
 					});
 					
-					YAHOO.EDF.Thumbnail.getThumbnail("http://code.google.com/p/ajax-alexa-thumbnails/", function(thumbnail){
-						YAHOO.util.Dom.get("container").appendChild(thumbnail);
-					}).getThumbnail("http://developer.yahoo.com/yui/", function(thumbnail){
-						YAHOO.util.Dom.get("container").appendChild(thumbnail);
+					YAHOO.EDF.Thumbnail.getThumbnail("http://www.google.com", function(thumbnail){
+						//alert(thumbnail);
 					});
 					
 				});
 			}
 		});
 	}());
-
 </script>
 }}}
