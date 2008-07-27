@@ -67,7 +67,7 @@ Another [recommended] option is to load and initialize the module using the [htt
 				YAHOO.util.Event.onDOMReady(function(){
 					
 					YAHOO.EDF.Thumbnail.init({
-						source:	"alexa_service.configured.php",
+						source:	"alexa_service.php",
 						size:	"large",
 						anchor:	true
 					});
