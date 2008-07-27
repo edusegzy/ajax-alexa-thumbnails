@@ -45,3 +45,11 @@ The following will initialize the `EDF.Thumbnail` module, point to the alexa_ser
 	}());
 </script>
 }}}
+
+= Advance usage with YUI Loader =
+
+Another [recommended] option is to load and initialize the module using the [http://developer.yahoo.com/yui/yuiloader/ YUI Loader]. The `EDF.Thumbnail` module registers itself as a YUI module, therefore it integrates with the YUI Loader.
+
+{{{
+
+}}}
