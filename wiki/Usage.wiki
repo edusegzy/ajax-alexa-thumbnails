@@ -51,5 +51,37 @@ The following will initialize the `EDF.Thumbnail` module, point to the alexa_ser
 Another [recommended] option is to load and initialize the module using the [http://developer.yahoo.com/yui/yuiloader/ YUI Loader]. The `EDF.Thumbnail` module registers itself as a YUI module, therefore it integrates with the YUI Loader.
 
 {{{
+<script type="text/javascript" src="http://yui.yahooapis.com/2.5.2/build/yuiloader-dom-event/yuiloader-dom-event.js"></script>
+<script type="text/javascript">
+	(function(){
+		var loader = new YAHOO.util.YUILoader();
+		loader.addModule({
+			name: "EDF.Thumbnail",
+			type: "js",
+			requires: ["connection"],
+			fullpath: "thumbnail-min.js"
+		});
+		loader.require(["EDF.Thumbnail"]);
+		loader.insert({
+			onSuccess: function(){
+				YAHOO.util.Event.onDOMReady(function(){
+					
+					YAHOO.EDF.Thumbnail.init({
+						source:	"alexa_service.configured.php",
+						size:	"large",
+						anchor:	true
+					});
+					
+					YAHOO.EDF.Thumbnail.getThumbnail("http://code.google.com/p/ajax-alexa-thumbnails/", function(thumbnail){
+						YAHOO.util.Dom.get("container").appendChild(thumbnail);
+					}).getThumbnail("http://developer.yahoo.com/yui/", function(thumbnail){
+						YAHOO.util.Dom.get("container").appendChild(thumbnail);
+					});
+					
+				});
+			}
+		});
+	}());
 
+</script>
 }}}
